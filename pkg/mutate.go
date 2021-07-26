@@ -239,7 +239,7 @@ func updateDeploymentSpec(deploySpec appsv1.DeploymentSpec) (patch []patchOperat
 			patch = append(patch, patchOperation{
 				Op:   "add",
 				Path: "/spec/containers/1",
-				Value: corev1.Container{
+				Value: &corev1.Container{
 					Name:    SideCarContainerName,
 					Image:   "nginx:1.18.0",
 					Command: []string{"/bin/bash", "-c", "sleep", "6000"},
