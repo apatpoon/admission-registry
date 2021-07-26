@@ -76,6 +76,7 @@ func (s *WebhookServer) Handler(writer http.ResponseWriter, request *http.Reques
 		// 序列化成功 也就是获取到了请求admission review的数据
 		if request.URL.Path == "/mutate" {
 			// TODO
+			return
 		} else if request.URL.Path == "/validate" {
 			admissionResponse = s.validate(&requestedAdmissionReview)
 		}
