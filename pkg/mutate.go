@@ -235,11 +235,9 @@ func updateDeploymentSpec(deploySpec appsv1.DeploymentSpec) (patch []patchOperat
 		corev1.Container{
 			Name:  SideCarContainerName,
 			Image: "nginx:1.18.0",
-
 			Ports: []corev1.ContainerPort{
 				{
-					Name: "http",
-
+					Name:          "http",
 					ContainerPort: 80,
 					Protocol:      "TCP",
 				},
@@ -249,7 +247,7 @@ func updateDeploymentSpec(deploySpec appsv1.DeploymentSpec) (patch []patchOperat
 
 	for _, add := range added {
 		value = add
-		path := "/spec/containers"
+		path := "/spec/template/spec/containers"
 		if first {
 			first = false
 			value = []corev1.Container{add}
