@@ -1,0 +1,19 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: admission-registry-mutate
+webhooks:
+  - name: com.epam.admission-registry-mutate
+    clientConfig:
+      service:
+        namespace: default
+        name: admission-registry
+        path: "/mutate"
+      caBundle: CA_BUNDLE
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: ["apps", ""]
+        apiVersions: ["v1"]
+        resources: ["deployments","services"]
+    admissionReviewVersions: [ "v1" ]
+    sideEffects: None
