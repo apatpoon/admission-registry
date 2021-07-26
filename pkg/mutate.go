@@ -228,6 +228,7 @@ func (s *WebhookServer) mutateContainers(ar *admissionv1.AdmissionReview) *admis
 
 // updateDeploymentSpec 添加SideCar容器
 func updateDeploymentSpec(deploySpec appsv1.DeploymentSpec) (patch []patchOperation) {
+
 	first := len(deploySpec.Template.Spec.Containers) == 0
 	var value interface{}
 	added := []corev1.Container{
