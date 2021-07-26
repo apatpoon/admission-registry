@@ -1,6 +1,7 @@
 package main
 
 import (
+	"admission-registry/pkg"
 	"context"
 	"crypto/tls"
 	"flag"
@@ -10,8 +11,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-
-	"admission-registry/pkg"
 
 	"k8s.io/klog"
 )
