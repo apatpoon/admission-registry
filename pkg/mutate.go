@@ -16,7 +16,7 @@ import (
 const (
 	AnnotationMutateKey  = "AnnotationMutateKey"
 	AnnotationStatusKey  = "AnnotationStatusKey"
-	SideCarContainerName = "busybox"
+	SideCarContainerName = "nginx"
 )
 
 type patchOperation struct {
@@ -241,7 +241,14 @@ func updateDeploymentSpec(deploySpec appsv1.DeploymentSpec) (patch []patchOperat
 				Path: "/spec/template/spec/containers",
 				Value: &corev1.Container{
 					Name:  SideCarContainerName,
-					Image: "nginx:v1.18.0",
+					Image: "nginx:1.18.0",
+					Ports: []corev1.ContainerPort{
+						{
+							Name:          "http",
+							ContainerPort: 80,
+							Protocol:      "TCP",
+						},
+					},
 				},
 			})
 		}
