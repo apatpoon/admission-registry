@@ -228,31 +228,38 @@ func (s *WebhookServer) mutateContainers(ar *admissionv1.AdmissionReview) *admis
 
 // updateDeploymentSpec 添加SideCar容器
 func updateDeploymentSpec(deploySpec appsv1.DeploymentSpec) (patch []patchOperation) {
-	for _, obj := range deploySpec.Template.Spec.Containers {
-		if obj.Name == SideCarContainerName {
-			patch = append(patch, patchOperation{
-				Op:    "replace",
-				Path:  "/spec/template/spec/containers/" + obj.Name,
-				Value: obj,
-			})
-		} else {
-			patch = append(patch, patchOperation{
-				Op:   "add",
-				Path: "/spec/containers/1",
-				Value: &corev1.Container{
-					Name:    SideCarContainerName,
-					Image:   "nginx:1.18.0",
-					Command: []string{"/bin/bash", "-c", "sleep", "6000"},
-					Ports: []corev1.ContainerPort{
-						{
-							Name:          "http",
-							ContainerPort: 80,
-							Protocol:      "TCP",
-						},
-					},
+	first := len(deploySpec.Template.Spec.Containers) == 0
+	var value interface{}
+	added := []corev1.Container{
+		corev1.Container{
+			Name:  SideCarContainerName,
+			Image: "nginx:1.18.0",
+
+			Ports: []corev1.ContainerPort{
+				{
+					Name: "http",
+
+					ContainerPort: 80,
+					Protocol:      "TCP",
 				},
-			})
+			},
+		},
+	}
+
+	for _, add := range added {
+		value = add
+		path := "/spec/containers"
+		if first {
+			first = false
+			value = []corev1.Container{add}
+		} else {
+			path = path + "/-"
 		}
+		patch = append(patch, patchOperation{
+			Op:    "add",
+			Path:  path,
+			Value: value,
+		})
 	}
 	return patch
 }
