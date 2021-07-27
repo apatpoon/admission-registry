@@ -12,6 +12,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
+// validate 目前仅对WhiteList Registry 进行判断
 func (s *WebhookServer) validate(ar *admissionv1.AdmissionReview) *admissionv1.AdmissionResponse {
 	// TODO
 	req := ar.Request

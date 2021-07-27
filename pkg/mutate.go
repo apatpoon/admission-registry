@@ -16,10 +16,10 @@ import (
 const (
 	admissionWebhookAnnotationInjectKey = "sidecar-injector-webhook.poon.me/inject"
 	admissionWebhookAnnotationStatusKey = "sidecar-injector-webhook.poon.me/status"
-	SideCarContainerName                = "nginx"
 	SideCarInjectedStatusInjected       = "injected"
 	ContainersBasePath                  = "/spec/template/spec/containers"
 	VolumesBasePath                     = "/spec/template/spec/volumes"
+	AnnotationBasePath                  = "/metadata/annotations"
 )
 
 var ignoredNamespaces = []string{
@@ -90,7 +90,7 @@ func (s *WebhookServer) mutateAnnotations(ar *admissionv1.AdmissionReview) *admi
 	// patch annotation
 	var patch []patchOperation
 
-	patch = append(patch, updateAnnotation(objectMeta.GetAnnotations(), annotations)...)
+	patch = append(patch, addAnnotation(objectMeta.GetAnnotations(), annotations, AnnotationBasePath)...)
 
 	patchBytes, err := json.Marshal(patch)
 	if err != nil {
@@ -111,7 +111,7 @@ func (s *WebhookServer) mutateAnnotations(ar *admissionv1.AdmissionReview) *admi
 	}
 }
 
-// mutate mutate Sidecar & Annotation
+// mutate  Sidecar & Annotation
 func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.AdmissionResponse {
 	// 取出admissionReview里面的Request
 	req := ar.Request
@@ -154,8 +154,10 @@ func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.Adm
 				},
 			}
 		}
+
 		// Adding Container
 		patch = append(patch, addContainer(&statefulset.Spec.Template.Spec.Containers, &s.SidecarConfig.Containers, ContainersBasePath)...)
+		// Adding Volume
 		patch = append(patch, addVolume(&statefulset.Spec.Template.Spec.Volumes, &s.SidecarConfig.Volumes, VolumesBasePath)...)
 		resourceName, resourceNamespace, objectMeta = statefulset.Name, statefulset.Namespace, &statefulset.ObjectMeta
 	default:
@@ -178,7 +180,7 @@ func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.Adm
 	annotations := map[string]string{admissionWebhookAnnotationStatusKey: "injected"}
 
 	// Adding Annotation
-	patch = append(patch, updateAnnotation(objectMeta.GetAnnotations(), annotations)...)
+	patch = append(patch, addAnnotation(objectMeta.GetAnnotations(), annotations, AnnotationBasePath)...)
 
 	patchBytes, err := json.Marshal(patch)
 	if err != nil {
@@ -234,14 +236,14 @@ func mutationRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool {
 	return required
 }
 
-// updateAnnotation 返回一个Annotation的Patch操作
-func updateAnnotation(target map[string]string, added map[string]string) (patch []patchOperation) {
+// addAnnotation 返回一个Annotation的Patch操作
+func addAnnotation(target map[string]string, added map[string]string, basePath string) (patch []patchOperation) {
 	for key, value := range added {
 		if target == nil || target[key] == "" {
 			target = map[string]string{}
 			patch = append(patch, patchOperation{
 				Op:   "add",
-				Path: "/metadata/annotations",
+				Path: basePath,
 				Value: map[string]string{
 					key: value,
 				},
@@ -249,7 +251,7 @@ func updateAnnotation(target map[string]string, added map[string]string) (patch 
 		} else {
 			patch = append(patch, patchOperation{
 				Op:    "replace",
-				Path:  "/metadata/annotations/" + key,
+				Path:  basePath + "/" + key,
 				Value: value,
 			})
 		}
@@ -257,7 +259,7 @@ func updateAnnotation(target map[string]string, added map[string]string) (patch 
 	return patch
 }
 
-// updateDeploymentSpec 添加SideCar容器
+// addContainer 添加SideCar容器
 func addContainer(containers *[]corev1.Container, added *[]corev1.Container, basePath string) (patch []patchOperation) {
 
 	first := len(*containers) == 0
@@ -297,6 +299,7 @@ func addContainer(containers *[]corev1.Container, added *[]corev1.Container, bas
 	return patch
 }
 
+// addVolume 添加Volume
 func addVolume(volumes *[]corev1.Volume, added *[]corev1.Volume, basePath string) (patch []patchOperation) {
 	first := len(*volumes) == 0
 	var value interface{}
