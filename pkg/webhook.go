@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	corev1 "k8s.io/api/core/v1"
+
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,14 +24,21 @@ var (
 
 // WhSvrParam 定义webhook server参数的结构体
 type WhSvrParam struct {
-	Port     int
-	CertFile string
-	KeyFile  string
+	Port           int
+	CertFile       string
+	KeyFile        string
+	SidecarCfgFile string
 }
 
 type WebhookServer struct {
+	SidecarConfig       *Config
 	Server              *http.Server // http server
 	WhiteListRegistries []string     // 白名单镜像仓库列表
+}
+
+type Config struct {
+	Containers []corev1.Container `yaml:"containers"`
+	Volumes    []corev1.Volume    `yaml:"volumes"`
 }
 
 func (s *WebhookServer) Handler(writer http.ResponseWriter, request *http.Request) {

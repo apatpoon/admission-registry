@@ -17,6 +17,10 @@ spec:
         - name: whitelist
           image: pooncheebean/admission-registry:v0.0.10
           imagePullPolicy: IfNotPresent
+          args:
+            - "--sidecarCfgFile=/etc/webhook/config/sidecarconfig.yaml"
+            - "--tlsCertFile=/etc/webhook/certs/tls.crt"
+            - "--tlsKeyFile=/etc/webhook/certs/tls.key"
           env:
             - name: WHITELIST_REGISTRIES
               value: "docker.io,gcr.io,pooncheebean"
@@ -26,10 +30,15 @@ spec:
             - name: webhook-certs
               mountPath: /etc/webhook/certs
               readOnly: true
+            - name: webhook-config
+              mountPath: /etc/webhook/config
       volumes:
         - name: webhook-certs
           secret:
             secretName: admission-registry-tls
+        - name: webhook-config
+          configMap:
+            name: sidecar-injector-webhook-configmap
 ---
 apiVersion: v1
 kind: Service

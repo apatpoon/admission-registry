@@ -3,17 +3,36 @@ package main
 import (
 	"admission-registry/pkg"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 
+	"github.com/ghodss/yaml"
 	"k8s.io/klog"
 )
+
+// loading config
+func loadConfig(configFile string) (*pkg.Config, error) {
+	data, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return nil, err
+	}
+	klog.Infof("New configuration: sha256sum %x", sha256.Sum256(data))
+
+	var cfg pkg.Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
 
 func main() {
 
@@ -23,6 +42,7 @@ func main() {
 	flag.IntVar(&param.Port, "port", 443, "webhook server tls port")
 	flag.StringVar(&param.CertFile, "tleCertFile", "/etc/webhook/certs/tls.crt", "x509 certificate")
 	flag.StringVar(&param.KeyFile, "tlsKeyFile", "/etc/webhook/certs/tls.key", "x509 private key file")
+	flag.StringVar(&param.SidecarCfgFile, "sidecarCfgFile", "/etc/webhook/config/sidecarconfig.yaml", "File containing the mutation configuration.")
 	flag.Parse()
 
 	// 加载证书文件生成证书对象
@@ -31,8 +51,14 @@ func main() {
 		klog.Errorf("Failed to load key pair: %s", err)
 		return
 	}
+	sidecarConfig, err := loadConfig(param.SidecarCfgFile)
+	if err != nil {
+		klog.Errorf("Failed to load config: %s", err)
+		return
+	}
 
 	whSrv := pkg.WebhookServer{
+		SidecarConfig: sidecarConfig,
 		Server: &http.Server{
 			// 配置端口
 			Addr:    fmt.Sprintf(":%v", param.Port),

@@ -18,6 +18,8 @@ const (
 	admissionWebhookAnnotationStatusKey = "sidecar-injector-webhook.poon.me/status"
 	SideCarContainerName                = "nginx"
 	SideCarInjectedStatusInjected       = "injected"
+	ContainersBasePath                  = "/spec/template/spec/containers"
+	VolumesBasePath                     = "/spec/template/spec/volumes"
 )
 
 var ignoredNamespaces = []string{
@@ -139,7 +141,8 @@ func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.Adm
 			}
 		}
 		// Adding Container
-		patch = append(patch, addContainer(&deployment.Spec.Template.Spec.Containers)...)
+		patch = append(patch, addContainer(&deployment.Spec.Template.Spec.Containers, &s.SidecarConfig.Containers, ContainersBasePath)...)
+		patch = append(patch, addVolume(&deployment.Spec.Template.Spec.Volumes, &s.SidecarConfig.Volumes, ContainersBasePath)...)
 		resourceName, resourceNamespace, objectMeta = deployment.Name, deployment.Namespace, &deployment.ObjectMeta
 	case "StatefulSet":
 		if err := json.Unmarshal(req.Object.Raw, &statefulset); err != nil {
@@ -152,7 +155,8 @@ func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.Adm
 			}
 		}
 		// Adding Container
-		patch = append(patch, addContainer(&statefulset.Spec.Template.Spec.Containers)...)
+		patch = append(patch, addContainer(&statefulset.Spec.Template.Spec.Containers, &s.SidecarConfig.Containers, ContainersBasePath)...)
+		patch = append(patch, addVolume(&statefulset.Spec.Template.Spec.Volumes, &s.SidecarConfig.Volumes, ContainersBasePath)...)
 		resourceName, resourceNamespace, objectMeta = statefulset.Name, statefulset.Namespace, &statefulset.ObjectMeta
 	default:
 		return &admissionv1.AdmissionResponse{
@@ -254,30 +258,54 @@ func updateAnnotation(target map[string]string, added map[string]string) (patch 
 }
 
 // updateDeploymentSpec 添加SideCar容器
-func addContainer(containers *[]corev1.Container) (patch []patchOperation) {
+func addContainer(containers *[]corev1.Container, added *[]corev1.Container, basePath string) (patch []patchOperation) {
 
 	first := len(*containers) == 0
 	var value interface{}
-	added := []corev1.Container{
-		{
-			Name:  SideCarContainerName,
-			Image: "nginx:1.18.0",
-			Ports: []corev1.ContainerPort{
-				{
-					Name:          "http",
-					ContainerPort: 80,
-					Protocol:      "TCP",
+	/*
+		added := []corev1.Container{
+			{
+				Name:  SideCarContainerName,
+				Image: "nginx:1.18.0",
+				Ports: []corev1.ContainerPort{
+					{
+						Name:          "http",
+						ContainerPort: 80,
+						Protocol:      "TCP",
+					},
 				},
 			},
-		},
-	}
+		}
 
-	for _, add := range added {
+	*/
+
+	for _, add := range *added {
 		value = add
-		path := "/spec/template/spec/containers"
+		path := basePath
 		if first {
 			first = false
 			value = []corev1.Container{add}
+		} else {
+			path = path + "/-"
+		}
+		patch = append(patch, patchOperation{
+			Op:    "add",
+			Path:  path,
+			Value: value,
+		})
+	}
+	return patch
+}
+
+func addVolume(volumes *[]corev1.Volume, added *[]corev1.Volume, basePath string) (patch []patchOperation) {
+	first := len(*volumes) == 0
+	var value interface{}
+	for _, add := range *added {
+		value = add
+		path := basePath
+		if first {
+			first = false
+			value = []corev1.Volume{add}
 		} else {
 			path = path + "/-"
 		}
