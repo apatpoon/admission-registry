@@ -142,7 +142,7 @@ func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.Adm
 		}
 		// Adding Container
 		patch = append(patch, addContainer(&deployment.Spec.Template.Spec.Containers, &s.SidecarConfig.Containers, ContainersBasePath)...)
-		patch = append(patch, addVolume(&deployment.Spec.Template.Spec.Volumes, &s.SidecarConfig.Volumes, ContainersBasePath)...)
+		patch = append(patch, addVolume(&deployment.Spec.Template.Spec.Volumes, &s.SidecarConfig.Volumes, VolumesBasePath)...)
 		resourceName, resourceNamespace, objectMeta = deployment.Name, deployment.Namespace, &deployment.ObjectMeta
 	case "StatefulSet":
 		if err := json.Unmarshal(req.Object.Raw, &statefulset); err != nil {
@@ -259,8 +259,7 @@ func updateAnnotation(target map[string]string, added map[string]string) (patch 
 
 // updateDeploymentSpec 添加SideCar容器
 func addContainer(containers *[]corev1.Container, added *[]corev1.Container, basePath string) (patch []patchOperation) {
-	fmt.Println(containers)
-	fmt.Println(added)
+
 	first := len(*containers) == 0
 	var value interface{}
 	/*
