@@ -109,64 +109,8 @@ func (s *WebhookServer) mutateAnnotations(ar *admissionv1.AdmissionReview) *admi
 	}
 }
 
-// mutationRequired 通过meta信息判断该资源是否需要mutate
-func mutationRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool {
-
-	// Check isIgnoreNamespaces
-	for _, namespace := range ignoredList {
-		if metadata.Namespace == namespace {
-			klog.Infof("Skip mutation for %v for it's in special namespace:%v", metadata.Name, metadata.Namespace)
-			return false
-		}
-	}
-	// 获取Annotation
-	annotations := metadata.GetAnnotations()
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
-
-	var required bool
-	// lowerCase annotation target Key
-	switch strings.ToLower(annotations[admissionWebhookAnnotationInjectKey]) {
-	default:
-		required = true
-	case "n", "no", "false", "off":
-		required = false
-	}
-	status := annotations[admissionWebhookAnnotationStatusKey]
-
-	if strings.ToLower(status) == SideCarInjectedStatusInjected {
-		required = false
-	}
-
-	klog.Infof("Mutation policy for %v/%v: required:%v", metadata.Namespace, metadata.Name, required)
-	return required
-}
-
-// updateAnnotation 返回一个Annotation的Patch操作
-func updateAnnotation(target map[string]string, added map[string]string) (patch []patchOperation) {
-	for key, value := range added {
-		if target == nil || target[key] == "" {
-			target = map[string]string{}
-			patch = append(patch, patchOperation{
-				Op:   "add",
-				Path: "/metadata/annotations",
-				Value: map[string]string{
-					key: value,
-				},
-			})
-		} else {
-			patch = append(patch, patchOperation{
-				Op:    "replace",
-				Path:  "/metadata/annotations/" + key,
-				Value: value,
-			})
-		}
-	}
-	return patch
-}
-
-func (s *WebhookServer) mutateContainers(ar *admissionv1.AdmissionReview) *admissionv1.AdmissionResponse {
+// mutate mutate Sidecar & Annotation
+func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.AdmissionResponse {
 	// 取出admissionReview里面的Request
 	req := ar.Request
 	var (
@@ -249,6 +193,63 @@ func (s *WebhookServer) mutateContainers(ar *admissionv1.AdmissionReview) *admis
 			return &pt
 		}(),
 	}
+}
+
+// mutationRequired 通过meta信息判断该资源是否需要mutate
+func mutationRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool {
+
+	// Check isIgnoreNamespaces
+	for _, namespace := range ignoredList {
+		if metadata.Namespace == namespace {
+			klog.Infof("Skip mutation for %v for it's in special namespace:%v", metadata.Name, metadata.Namespace)
+			return false
+		}
+	}
+	// 获取Annotation
+	annotations := metadata.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	var required bool
+	// lowerCase annotation target Key
+	switch strings.ToLower(annotations[admissionWebhookAnnotationInjectKey]) {
+	default:
+		required = true
+	case "n", "no", "false", "off":
+		required = false
+	}
+	status := annotations[admissionWebhookAnnotationStatusKey]
+
+	if strings.ToLower(status) == SideCarInjectedStatusInjected {
+		required = false
+	}
+
+	klog.Infof("Mutation policy for %v/%v: required:%v", metadata.Namespace, metadata.Name, required)
+	return required
+}
+
+// updateAnnotation 返回一个Annotation的Patch操作
+func updateAnnotation(target map[string]string, added map[string]string) (patch []patchOperation) {
+	for key, value := range added {
+		if target == nil || target[key] == "" {
+			target = map[string]string{}
+			patch = append(patch, patchOperation{
+				Op:   "add",
+				Path: "/metadata/annotations",
+				Value: map[string]string{
+					key: value,
+				},
+			})
+		} else {
+			patch = append(patch, patchOperation{
+				Op:    "replace",
+				Path:  "/metadata/annotations/" + key,
+				Value: value,
+			})
+		}
+	}
+	return patch
 }
 
 // updateDeploymentSpec 添加SideCar容器

@@ -75,7 +75,7 @@ func (s *WebhookServer) Handler(writer http.ResponseWriter, request *http.Reques
 		if request.URL.Path == "/mutate" {
 			// TODO
 			//admissionResponse = s.mutateAnnotations(&requestedAdmissionReview)
-			admissionResponse = s.mutateContainers(&requestedAdmissionReview)
+			admissionResponse = s.mutate(&requestedAdmissionReview)
 
 		} else if request.URL.Path == "/validate" {
 			admissionResponse = s.validate(&requestedAdmissionReview)
