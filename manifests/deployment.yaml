@@ -15,12 +15,12 @@ spec:
     spec:
       containers:
         - name: whitelist
-          image: pooncheebean/admission-registry:v0.0.10
-          imagePullPolicy: IfNotPresent
+          image: pooncheebean/admission-registry:latest
+          imagePullPolicy: Always
           args:
-            - "--sidecarCfgFile=/etc/webhook/config/sidecarconfig.yaml"
-            - "--tlsCertFile=/etc/webhook/certs/tls.crt"
-            - "--tlsKeyFile=/etc/webhook/certs/tls.key"
+            - "-sidecarCfgFile=/etc/webhook/config/sidecarconfig.yaml"
+            - "-tlsCertFile=/etc/webhook/certs/tls.crt"
+            - "-tlsKeyFile=/etc/webhook/certs/tls.key"
           env:
             - name: WHITELIST_REGISTRIES
               value: "docker.io,gcr.io,pooncheebean"
