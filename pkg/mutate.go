@@ -17,6 +17,7 @@ const (
 	admissionWebhookAnnotationInjectKey = "sidecar-injector-webhook.poon.me/inject"
 	admissionWebhookAnnotationStatusKey = "sidecar-injector-webhook.poon.me/status"
 	SideCarContainerName                = "nginx"
+	SideCarInjectedStatusInjected       = "injected"
 )
 
 var ignoredNamespaces = []string{
@@ -110,6 +111,8 @@ func (s *WebhookServer) mutateAnnotations(ar *admissionv1.AdmissionReview) *admi
 
 // mutationRequired 通过meta信息判断该资源是否需要mutate
 func mutationRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool {
+
+	// Check isIgnoreNamespaces
 	for _, namespace := range ignoredList {
 		if metadata.Namespace == namespace {
 			klog.Infof("Skip mutation for %v for it's in special namespace:%v", metadata.Name, metadata.Namespace)
@@ -132,7 +135,7 @@ func mutationRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool {
 	}
 	status := annotations[admissionWebhookAnnotationStatusKey]
 
-	if strings.ToLower(status) == "mutated" {
+	if strings.ToLower(status) == SideCarInjectedStatusInjected {
 		required = false
 	}
 
@@ -168,13 +171,15 @@ func (s *WebhookServer) mutateContainers(ar *admissionv1.AdmissionReview) *admis
 	req := ar.Request
 	var (
 		objectMeta        *metav1.ObjectMeta
+		deployment        *appsv1.Deployment
+		statefulset       *appsv1.StatefulSet
 		resourceNamespace string
 		resourceName      string
-		deployment        *appsv1.Deployment
 	)
+
 	klog.Infof("AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v Operation=%v", req.Kind.Kind, req.Namespace, req.Name, req.UID, req.Operation)
 
-	// switch Deployment & Service
+	// switch Deployment & StatefulSet
 	switch req.Kind.Kind {
 
 	case "Deployment":
@@ -188,6 +193,17 @@ func (s *WebhookServer) mutateContainers(ar *admissionv1.AdmissionReview) *admis
 			}
 		}
 		resourceName, resourceNamespace, objectMeta = deployment.Name, deployment.Namespace, &deployment.ObjectMeta
+	case "StatefulSet":
+		if err := json.Unmarshal(req.Object.Raw, &statefulset); err != nil {
+			klog.Errorf("Could not unmarshal raw object: %v", err)
+			return &admissionv1.AdmissionResponse{
+				Result: &metav1.Status{
+					Code:    http.StatusBadRequest,
+					Message: err.Error(),
+				},
+			}
+		}
+		resourceName, resourceNamespace, objectMeta = statefulset.Name, statefulset.Namespace, &statefulset.ObjectMeta
 	default:
 		return &admissionv1.AdmissionResponse{
 			Result: &metav1.Status{
@@ -204,9 +220,15 @@ func (s *WebhookServer) mutateContainers(ar *admissionv1.AdmissionReview) *admis
 			Allowed: true,
 		}
 	}
+	// 需要mutate则初始化Annotation
+	annotations := map[string]string{admissionWebhookAnnotationStatusKey: "injected"}
+
 	// patch annotation
 	var patch []patchOperation
 
+	// Adding Annotation
+	patch = append(patch, updateAnnotation(objectMeta.GetAnnotations(), annotations)...)
+	// Adding Container
 	patch = append(patch, updateDeploymentSpec(deployment.Spec)...)
 
 	patchBytes, err := json.Marshal(patch)
@@ -217,6 +239,7 @@ func (s *WebhookServer) mutateContainers(ar *admissionv1.AdmissionReview) *admis
 			},
 		}
 	}
+
 	klog.Infof("AdmissionResponse: patch=%v\n", string(patchBytes))
 	return &admissionv1.AdmissionResponse{
 		Allowed: true,
