@@ -14,10 +14,15 @@ import (
 )
 
 const (
-	AnnotationMutateKey  = "AnnotationMutateKey"
-	AnnotationStatusKey  = "AnnotationStatusKey"
-	SideCarContainerName = "nginx"
+	admissionWebhookAnnotationInjectKey = "sidecar-injector-webhook.poon.me/inject"
+	admissionWebhookAnnotationStatusKey = "sidecar-injector-webhook.poon.me/status"
+	SideCarContainerName                = "nginx"
 )
+
+var ignoredNamespaces = []string{
+	metav1.NamespaceSystem,
+	metav1.NamespacePublic,
+}
 
 type patchOperation struct {
 	Op    string      `json:"op"`
@@ -69,7 +74,7 @@ func (s *WebhookServer) mutateAnnotations(ar *admissionv1.AdmissionReview) *admi
 			},
 		}
 	}
-	if !mutationRequired(objectMeta) {
+	if !mutationRequired(ignoredNamespaces, objectMeta) {
 		// 如果不需要直接返回admissionResponse
 		klog.Infof("Skipping validation for %s/%s due to policy check", resourceNamespace, resourceName)
 		return &admissionv1.AdmissionResponse{
@@ -77,7 +82,7 @@ func (s *WebhookServer) mutateAnnotations(ar *admissionv1.AdmissionReview) *admi
 		}
 	}
 	// 需要mutate则初始化Annotation
-	annotations := map[string]string{AnnotationStatusKey: "mutated"}
+	annotations := map[string]string{admissionWebhookAnnotationStatusKey: "mutated"}
 
 	// patch annotation
 	var patch []patchOperation
@@ -104,7 +109,13 @@ func (s *WebhookServer) mutateAnnotations(ar *admissionv1.AdmissionReview) *admi
 }
 
 // mutationRequired 通过meta信息判断该资源是否需要mutate
-func mutationRequired(metadata *metav1.ObjectMeta) bool {
+func mutationRequired(ignoredList []string, metadata *metav1.ObjectMeta) bool {
+	for _, namespace := range ignoredList {
+		if metadata.Namespace == namespace {
+			klog.Infof("Skip mutation for %v for it's in special namespace:%v", metadata.Name, metadata.Namespace)
+			return false
+		}
+	}
 	// 获取Annotation
 	annotations := metadata.GetAnnotations()
 	if annotations == nil {
@@ -113,13 +124,13 @@ func mutationRequired(metadata *metav1.ObjectMeta) bool {
 
 	var required bool
 	// lowerCase annotation target Key
-	switch strings.ToLower(annotations[AnnotationMutateKey]) {
+	switch strings.ToLower(annotations[admissionWebhookAnnotationInjectKey]) {
 	default:
 		required = true
 	case "n", "no", "false", "off":
 		required = false
 	}
-	status := annotations[AnnotationStatusKey]
+	status := annotations[admissionWebhookAnnotationStatusKey]
 
 	if strings.ToLower(status) == "mutated" {
 		required = false
@@ -163,15 +174,6 @@ func (s *WebhookServer) mutateContainers(ar *admissionv1.AdmissionReview) *admis
 	)
 	klog.Infof("AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v Operation=%v", req.Kind.Kind, req.Namespace, req.Name, req.UID, req.Operation)
 
-	if req.Namespace != corev1.NamespaceDefault {
-		return &admissionv1.AdmissionResponse{
-			Result: &metav1.Status{
-				Code:    http.StatusBadRequest,
-				Message: fmt.Sprintf("Only Default namespace supported: %s", req.Namespace),
-			},
-		}
-	}
-
 	// switch Deployment & Service
 	switch req.Kind.Kind {
 
@@ -195,7 +197,7 @@ func (s *WebhookServer) mutateContainers(ar *admissionv1.AdmissionReview) *admis
 		}
 	}
 
-	if !mutationRequired(objectMeta) {
+	if !mutationRequired(ignoredNamespaces, objectMeta) {
 		// 如果不需要直接返回admissionResponse
 		klog.Infof("Skipping validation for %s/%s due to policy check", resourceNamespace, resourceName)
 		return &admissionv1.AdmissionResponse{
@@ -232,7 +234,7 @@ func updateDeploymentSpec(deploySpec appsv1.DeploymentSpec) (patch []patchOperat
 	first := len(deploySpec.Template.Spec.Containers) == 0
 	var value interface{}
 	added := []corev1.Container{
-		corev1.Container{
+		{
 			Name:  SideCarContainerName,
 			Image: "nginx:1.18.0",
 			Ports: []corev1.ContainerPort{
