@@ -259,7 +259,8 @@ func updateAnnotation(target map[string]string, added map[string]string) (patch 
 
 // updateDeploymentSpec 添加SideCar容器
 func addContainer(containers *[]corev1.Container, added *[]corev1.Container, basePath string) (patch []patchOperation) {
-
+	fmt.Println(containers)
+	fmt.Println(added)
 	first := len(*containers) == 0
 	var value interface{}
 	/*
