@@ -119,6 +119,8 @@ func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.Adm
 		statefulset       *appsv1.StatefulSet
 		resourceNamespace string
 		resourceName      string
+		// patch annotation
+		patch []patchOperation
 	)
 
 	klog.Infof("AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v Operation=%v", req.Kind.Kind, req.Namespace, req.Name, req.UID, req.Operation)
@@ -136,6 +138,8 @@ func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.Adm
 				},
 			}
 		}
+		// Adding Container
+		patch = append(patch, addContainer(&deployment.Spec.Template.Spec.Containers)...)
 		resourceName, resourceNamespace, objectMeta = deployment.Name, deployment.Namespace, &deployment.ObjectMeta
 	case "StatefulSet":
 		if err := json.Unmarshal(req.Object.Raw, &statefulset); err != nil {
@@ -147,6 +151,8 @@ func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.Adm
 				},
 			}
 		}
+		// Adding Container
+		patch = append(patch, addContainer(&statefulset.Spec.Template.Spec.Containers)...)
 		resourceName, resourceNamespace, objectMeta = statefulset.Name, statefulset.Namespace, &statefulset.ObjectMeta
 	default:
 		return &admissionv1.AdmissionResponse{
@@ -167,13 +173,8 @@ func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.Adm
 	// 需要mutate则初始化Annotation
 	annotations := map[string]string{admissionWebhookAnnotationStatusKey: "injected"}
 
-	// patch annotation
-	var patch []patchOperation
-
 	// Adding Annotation
 	patch = append(patch, updateAnnotation(objectMeta.GetAnnotations(), annotations)...)
-	// Adding Container
-	patch = append(patch, updateDeploymentSpec(deployment.Spec)...)
 
 	patchBytes, err := json.Marshal(patch)
 	if err != nil {
@@ -253,9 +254,9 @@ func updateAnnotation(target map[string]string, added map[string]string) (patch 
 }
 
 // updateDeploymentSpec 添加SideCar容器
-func updateDeploymentSpec(deploySpec appsv1.DeploymentSpec) (patch []patchOperation) {
+func addContainer(containers *[]corev1.Container) (patch []patchOperation) {
 
-	first := len(deploySpec.Template.Spec.Containers) == 0
+	first := len(*containers) == 0
 	var value interface{}
 	added := []corev1.Container{
 		{
