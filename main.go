@@ -40,7 +40,7 @@ func main() {
 	// webhook http server (tls)
 	// 命令行参数传递证书参数
 	flag.IntVar(&param.Port, "port", 443, "webhook server tls port")
-	flag.StringVar(&param.CertFile, "tleCertFile", "/etc/webhook/certs/tls.crt", "x509 certificate")
+	flag.StringVar(&param.CertFile, "tlsCertFile", "/etc/webhook/certs/tls.crt", "x509 certificate")
 	flag.StringVar(&param.KeyFile, "tlsKeyFile", "/etc/webhook/certs/tls.key", "x509 private key file")
 	flag.StringVar(&param.SidecarCfgFile, "sidecarCfgFile", "/etc/webhook/config/sidecarconfig.yaml", "File containing the mutation configuration.")
 	flag.Parse()
