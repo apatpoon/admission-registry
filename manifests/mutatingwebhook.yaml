@@ -1,19 +1,23 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: admission-registry-mutate
+  name: sidecar-injector-webhook-cfg
+  labels:
+    app: sidecar-injector
 webhooks:
   - name: com.epam.admission-registry-mutate
     clientConfig:
       service:
-        namespace: default
         name: admission-registry
+        namespace: default
         path: "/mutate"
-      caBundle: CA_BUNDLE
+      caBundle: ${CA_BUNDLE}
     rules:
       - operations: [ "CREATE" ]
         apiGroups: ["apps", ""]
         apiVersions: ["v1"]
-        resources: ["deployments","services"]
+        resources: ["deployments","statefulsets"]
     admissionReviewVersions: [ "v1" ]
-    sideEffects: None
+    namespaceSelector:
+      matchLabels:
+        sidecar-injection: enabled

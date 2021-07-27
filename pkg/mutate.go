@@ -262,30 +262,15 @@ func addAnnotation(target map[string]string, added map[string]string, basePath s
 // addContainer 添加SideCar容器
 func addContainer(containers *[]corev1.Container, added *[]corev1.Container, basePath string) (patch []patchOperation) {
 
-	first := len(*containers) == 0
-	var value interface{}
-	/*
-		added := []corev1.Container{
-			{
-				Name:  SideCarContainerName,
-				Image: "nginx:1.18.0",
-				Ports: []corev1.ContainerPort{
-					{
-						Name:          "http",
-						ContainerPort: 80,
-						Protocol:      "TCP",
-					},
-				},
-			},
-		}
+	isFirst := len(*containers) == 0
 
-	*/
+	var value interface{}
 
 	for _, add := range *added {
 		value = add
 		path := basePath
-		if first {
-			first = false
+		if isFirst {
+			isFirst = false
 			value = []corev1.Container{add}
 		} else {
 			path = path + "/-"
@@ -301,13 +286,13 @@ func addContainer(containers *[]corev1.Container, added *[]corev1.Container, bas
 
 // addVolume 添加Volume
 func addVolume(volumes *[]corev1.Volume, added *[]corev1.Volume, basePath string) (patch []patchOperation) {
-	first := len(*volumes) == 0
+	isFirst := len(*volumes) == 0
 	var value interface{}
 	for _, add := range *added {
 		value = add
 		path := basePath
-		if first {
-			first = false
+		if isFirst {
+			isFirst = false
 			value = []corev1.Volume{add}
 		} else {
 			path = path + "/-"
