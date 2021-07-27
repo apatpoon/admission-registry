@@ -156,7 +156,7 @@ func (s *WebhookServer) mutate(ar *admissionv1.AdmissionReview) *admissionv1.Adm
 		}
 		// Adding Container
 		patch = append(patch, addContainer(&statefulset.Spec.Template.Spec.Containers, &s.SidecarConfig.Containers, ContainersBasePath)...)
-		patch = append(patch, addVolume(&statefulset.Spec.Template.Spec.Volumes, &s.SidecarConfig.Volumes, ContainersBasePath)...)
+		patch = append(patch, addVolume(&statefulset.Spec.Template.Spec.Volumes, &s.SidecarConfig.Volumes, VolumesBasePath)...)
 		resourceName, resourceNamespace, objectMeta = statefulset.Name, statefulset.Namespace, &statefulset.ObjectMeta
 	default:
 		return &admissionv1.AdmissionResponse{
