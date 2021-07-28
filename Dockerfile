@@ -25,6 +25,6 @@ RUN go mod download && \
     go build -a -o admission-registry main.go && \
     upx admission-registry
 
-FROM alpine:3.9.2
+FROM alpine:latest
 COPY --from=builder /workspace/admission-registry .
 ENTRYPOINT ["/admission-registry"]
