@@ -57,7 +57,7 @@ data:
 kubectl apply -f manifests/deployment.yaml
 ```
 
-### 4.apply admission rules after applied application
+### 4.apply admission rules after application applied 
 ```shell
 kubectl apply -f manifests/mutatingwebhook.yaml
 ```
