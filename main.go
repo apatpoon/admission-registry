@@ -57,6 +57,7 @@ func main() {
 		return
 	}
 
+	klog.Info("Init WebhookServer")
 	whSrv := pkg.WebhookServer{
 		SidecarConfig: sidecarConfig,
 		Server: &http.Server{
@@ -71,7 +72,7 @@ func main() {
 		// 获取白名单以逗号分割
 		WhiteListRegistries: strings.Split(os.Getenv("WHITELIST_REGISTRIES"), ","),
 	}
-
+	klog.Info("Init Finish")
 	// 定义http server handler
 	mux := http.NewServeMux()
 	mux.HandleFunc("/validate", whSrv.Handler)
