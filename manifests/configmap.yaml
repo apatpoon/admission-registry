@@ -10,6 +10,28 @@ data:
       imagePullPolicy: IfNotPresent
       ports:
       - containerPort: 80
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "50Mi"
+        limits:
+          cpu: "100m"
+          memory: "100Mi"
+      volumeMounts:
+      - name: nginx-conf
+        mountPath: /etc/nginx
+    - name: nginx2
+      image: nginx:1.18.0
+      imagePullPolicy: IfNotPresent
+      ports:
+      - containerPort: 80
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "50Mi"
+        limits:
+          cpu: "100m"
+          memory: "100Mi"
       volumeMounts:
       - name: nginx-conf
         mountPath: /etc/nginx
