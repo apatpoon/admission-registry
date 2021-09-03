@@ -65,10 +65,10 @@ EOF
 #cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -hostname="${serviceName}.${serviceNamespace}.svc" -profile=server server-csr.json | cfssljson -bare server
 cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -hostname=admission-registry.default.svc -profile=server server-csr.json | cfssljson -bare server
 
-kubectl delete secret admission-registry-tls
-kubectl create secret tls admission-registry-tls \
-        --key=server-key.pem \
-        --cert=server.pem
+#kubectl delete secret admission-registry-tls
+#kubectl create secret tls admission-registry-tls \
+#        --key=server-key.pem \
+#        --cert=server.pem
 
 echo "Use this follow output to replace CA_BUNDLE in mutating | validating webhook yaml"
 cat ca.pem | base64

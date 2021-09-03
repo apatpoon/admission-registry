@@ -11,8 +11,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/ghodss/yaml"
 	"k8s.io/klog"
@@ -43,6 +46,14 @@ func main() {
 	flag.StringVar(&param.CertFile, "tlsCertFile", "/etc/webhook/certs/tls.crt", "x509 certificate")
 	flag.StringVar(&param.KeyFile, "tlsKeyFile", "/etc/webhook/certs/tls.key", "x509 private key file")
 	flag.StringVar(&param.SidecarCfgFile, "sidecarCfgFile", "/etc/webhook/config/sidecarconfig.yaml", "File containing the mutation configuration.")
+
+	if runtime.GOOS == "windows" {
+		param.Port = 8443
+		param.CertFile = "./dev/cert/server.pem"
+		param.KeyFile = "./dev/cert/server-key.pem"
+		param.SidecarCfgFile = "./dev/config/sidecarconfig.yaml"
+	}
+
 	flag.Parse()
 
 	// 加载证书文件生成证书对象
@@ -78,6 +89,8 @@ func main() {
 	mux.HandleFunc("/validate", whSrv.Handler)
 	mux.HandleFunc("/mutate", whSrv.Handler) // 暂不实现
 
+	// explore handler
+	mux.Handle("/metrics", promhttp.Handler())
 	// 注册handler
 	whSrv.Server.Handler = mux
 
@@ -87,6 +100,7 @@ func main() {
 		if err != nil {
 			klog.Errorf("Failed to startup: %s", err)
 		}
+
 	}()
 
 	klog.Info("Server started")
