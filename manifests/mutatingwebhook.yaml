@@ -42,7 +42,7 @@ webhooks:
         apiVersions: ["v1"]
         resources: ["deployments","statefulsets"]
     admissionReviewVersions: [ "v1" ]
-    #sideEffects: None
+    sideEffects: None
     namespaceSelector:
       matchLabels:
         sidecar-injection: enabled
