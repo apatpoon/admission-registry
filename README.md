@@ -61,11 +61,11 @@ data:
 kubectl apply -f manifests/deployment.yaml
 ```
 
-### 4.apply admission rules after application applied 
+### 4.Apply admission rules after application applied 
 ```shell
 kubectl apply -f manifests/mutatingwebhook.yaml
 ```
-### notice
+### Notice
 ```yaml
 # using sidecar configmap if needed
 kubectl apply -f configmap/sidecar-nginx-configmap.yaml
