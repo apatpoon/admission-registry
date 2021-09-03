@@ -15,7 +15,7 @@ webhooks:
         name: admission-registry
         path: "/validate"
       #caBundle: CA_BUNDLE （cat ca.pem | base64）
-      caBundle: >
+      caBundle: |
         LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURyakNDQXBhZ0F3SUJBZ0lVYTVldExEckNj
         WWZJT0dFR2g4aTdsWFdCMURFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1hURUxNQWtHQTFVRUJoTUNR
         MDR4RURBT0JnTlZCQWdUQjBKbGFVcHBibWN4RURBT0JnTlZCQWNUQjBKbAphVXBwYm1jeEREQUtC
