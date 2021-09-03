@@ -48,7 +48,7 @@ func main() {
 	flag.StringVar(&param.SidecarCfgFile, "sidecarCfgFile", "/etc/webhook/config/sidecarconfig.yaml", "File containing the mutation configuration.")
 
 	if runtime.GOOS == "windows" {
-		param.Port = 8443
+		param.Port = 443000
 		param.CertFile = "./dev/cert/server.pem"
 		param.KeyFile = "./dev/cert/server-key.pem"
 		param.SidecarCfgFile = "./dev/config/sidecarconfig.yaml"
@@ -88,25 +88,24 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/validate", whSrv.Handler)
 	mux.HandleFunc("/mutate", whSrv.Handler) // 暂不实现
-
 	// explore handler
 	mux.Handle("/metrics", promhttp.Handler())
 	// 注册handler
 	whSrv.Server.Handler = mux
 
+	// 监听os的关闭信号
+	signalChan := make(chan os.Signal, 1)
+
 	// 使用新的go routine启动webhook server
-	go func() {
+	go func(chan os.Signal) {
 		err := whSrv.Server.ListenAndServeTLS("", "")
 		if err != nil {
 			klog.Errorf("Failed to startup: %s", err)
+			signalChan <- syscall.SIGKILL
 		}
-
-	}()
+	}(signalChan)
 
 	klog.Info("Server started")
-
-	// 监听os的关闭信号
-	signalChan := make(chan os.Signal, 1)
 
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
