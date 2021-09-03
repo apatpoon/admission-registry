@@ -1,6 +1,9 @@
 # admission-registry
-adding sidecar containers & volumes in a labeled namespace by admission Controller mutating
-add annotation to avoid inject sidecar "sidecar-injector-webhook.poon.me/inject: false"
+Adding sidecar containers & volumes in a labeled namespace by admission Controller mutating
+Adding annotation to avoid inject sidecar "sidecar-injector-webhook.poon.me/inject: false"
+Remember to enable admission plugin in kube-apiserver:
+--enable-admission-plugins=NodeRestriction,MutatingAdmissionWebhook,ValidatingAdmissionWebhook
+
 ### 1. Using cert-generated.sh to generated certs for application
 ```shell
 # should have a look at this script, modify the param you need
