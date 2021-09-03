@@ -1,13 +1,9 @@
 #!/bin/bash
-# shellcheck disable=SC2034
 expireTime="87600h"
-service-name="admission-registry"
-service-namespace="default"
-wget https://pkg.cfssl.org/R1.2/cfssl_linux-amd64
-wget https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64
-chmod +x cfssl_linux-amd64 cfssljson_linux-amd64
-sudo mv cfssl_linux-amd64 /usr/local/bin/cfssl
-sudo mv cfssljson_linux-amd64 /usr/local/bin/cfssljson
+serviceName="admission-registry"
+serviceNamespace="default"
+[ $(which cfssl | wc -l) -eq 0 ] && wget https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 && chmod +x cfssl_linux-amd64 && mv cfssl_linux-amd64 /usr/local/bin/cfssl
+[ $(which cfssljson | wc -l) -eq 0 ] && wget https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64 && chmod +x cfssljson_linux-amd64 && cfssljson_linux-amd64 /usr/local/bin/cfssljson
 
 cat > ca-config.json <<EOF
 {
@@ -27,7 +23,7 @@ EOF
 
 cat > ca-csr.json <<EOF
 {
-    "CN": ${CN},
+    "CN": "CN",
     "key": {
         "algo": "rsa",
         "size": 2048
@@ -67,7 +63,7 @@ EOF
 
 # -hostname 的值，格式为  {service-name}.{service-namespace}.svc，其中 service-name 代表你 webhook 的 Service 名字，service-namespace 代表你 webhook 的命名空间。
 cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json \
-		-hostname="${service-name}"."${service-namespace}".svc -profile=server server-csr.json | cfssljson -bare server
+                -hostname="${serviceName}"."${serviceNamespace}".svc -profile=server server-csr.json | cfssljson -bare server
 
 kubectl create secret tls admission-registry-tls \
         --key=server-key.pem \
