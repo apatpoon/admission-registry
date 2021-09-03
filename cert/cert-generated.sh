@@ -9,12 +9,12 @@ cat > ca-config.json <<EOF
 {
   "signing": {
     "default": {
-      "expiry": ${expireTime}
+      "expiry": "${expireTime}"
     },
     "profiles": {
       "server": {
         "usages": ["signing", "key encipherment", "server auth", "client auth"],
-        "expiry": ${expireTime}
+        "expiry": "${expireTime}"
       }
     }
   }
@@ -23,7 +23,7 @@ EOF
 
 cat > ca-csr.json <<EOF
 {
-    "CN": "CN",
+    "CN": "kubernetes",
     "key": {
         "algo": "rsa",
         "size": 2048
@@ -62,9 +62,10 @@ cat > server-csr.json <<EOF
 EOF
 
 # -hostname 的值，格式为  {service-name}.{service-namespace}.svc，其中 service-name 代表你 webhook 的 Service 名字，service-namespace 代表你 webhook 的命名空间。
-cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json \
-                -hostname="${serviceName}"."${serviceNamespace}".svc -profile=server server-csr.json | cfssljson -bare server
+#cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -hostname="${serviceName}.${serviceNamespace}.svc" -profile=server server-csr.json | cfssljson -bare server
+cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -hostname=admission-registry.default.svc -profile=server server-csr.json | cfssljson -bare server
 
+kubectl delete secret admission-registry-tls
 kubectl create secret tls admission-registry-tls \
         --key=server-key.pem \
         --cert=server.pem
